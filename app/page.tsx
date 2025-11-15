@@ -260,6 +260,17 @@ export default function Page() {
   const [lottieVisible, setLottieVisible] = useState(false);
   const [touchedCard, setTouchedCard] = useState<number | null>(null);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [particles, setParticles] = useState<
+    Array<{
+      left: string;
+      top: string;
+      initX: number;
+      initY: number;
+      duration: number;
+      delay: number;
+      size: number;
+    }>
+  >([]);
 
   const activeProject = showcaseProjects[hoveredProject] ?? showcaseProjects[0];
 
@@ -268,6 +279,39 @@ export default function Page() {
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 1900);
     return () => window.clearTimeout(timer);
+  }, []);
+
+  // Initialize decorative particles on client only (avoid SSR window access)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const count = 20;
+    const arr = Array.from({ length: count }).map(() => {
+      const left = `${Math.random() * 100}%`;
+      const top = `${Math.random() * 100}%`;
+      const initX = Math.random() * window.innerWidth;
+      const initY = Math.random() * window.innerHeight;
+      const duration = Math.random() * 10 + 8;
+      const delay = Math.random() * 5;
+      const size = Math.random() * 3 + 1;
+      return { left, top, initX, initY, duration, delay, size };
+    });
+    setParticles(arr);
+    // Recompute on resize to adapt to viewport
+    const onResize = () => {
+      const arr2 = Array.from({ length: count }).map(() => {
+        const left = `${Math.random() * 100}%`;
+        const top = `${Math.random() * 100}%`;
+        const initX = Math.random() * window.innerWidth;
+        const initY = Math.random() * window.innerHeight;
+        const duration = Math.random() * 10 + 8;
+        const delay = Math.random() * 5;
+        const size = Math.random() * 3 + 1;
+        return { left, top, initX, initY, duration, delay, size };
+      });
+      setParticles(arr2);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   useEffect(() => {
@@ -1412,29 +1456,24 @@ export default function Page() {
             minHeight: "100vh",
           }}
         >
-          {/* Floating particles for visual interest */}
+          {/* Floating particles for visual interest (client-only positions) */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {[...Array(20)].map((_, i) => (
+            {particles.map((p, i) => (
               <motion.div
                 key={i}
-                className="absolute w-2 h-2 bg-white/20 rounded-full"
-                initial={{
-                  x: Math.random() * window.innerWidth,
-                  y: Math.random() * window.innerHeight,
-                  opacity: 0,
-                }}
-                animate={{
-                  y: [null, -100],
-                  opacity: [0, 1, 0],
-                }}
-                transition={{
-                  duration: Math.random() * 10 + 10,
-                  repeat: Infinity,
-                  delay: Math.random() * 5,
-                }}
+                className="absolute rounded-full bg-white/20"
                 style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
+                  left: p.left,
+                  top: p.top,
+                  width: `${p.size}px`,
+                  height: `${p.size}px`,
+                }}
+                initial={{ x: p.initX, y: p.initY, opacity: 0 }}
+                animate={{ y: [null, -100], opacity: [0, 1, 0] }}
+                transition={{
+                  duration: p.duration,
+                  repeat: Infinity,
+                  delay: p.delay,
                 }}
               />
             ))}
